@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galactic Trail Chasing Heart</title>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        } 
+        body { 
+            background: #000; 
+            overflow: hidden; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+        } 
+        canvas { 
+            display: block; 
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="c"></canvas>
+
+    <script>
+        const canvas = document.getElementById("c"); 
+        const ctx = canvas.getContext("2d"); 
+
+        canvas.width = window.innerWidth; 
+        canvas.height = window.innerHeight; 
+
+        let angle = 0; 
+        const NUM_STEPS = 60; // Liczba głównych segmentów goniących się w pętli
+        const TRAIL_LENGTH = 6; // Długość śladu (ogona) dla każdego segmentu
+        const SCALE = 15; 
+        const TEXT = "I love you"; 
+
+        // Struktury dla tła galaktycznego i spadających serc
+        const stars = [];
+        const fallingHearts = [];
+
+        // Generowanie statycznych gwiazd w tle
+        for (let i = 0; i < 150; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 1.5,
+                alpha: Math.random(),
+                speed: 0.01 + Math.random() * 0.02
+            });
+        }
+
+        // Funkcja tworząca nowe spadające serce
+        function createFallingHeart() {
+            return {
+                x: Math.random() * canvas.width,
+                y: -20,
+                size: 4 + Math.random() * 6,
+                speedY: 1 + Math.random() * 2,
+                speedX: (Math.random() - 0.5) * 0.5,
+                alpha: 0.3 + Math.random() * 0.5
+            };
+        }
+
+        // Inicjalizacja pierwszych spadających serduszek
+        for (let i = 0; i < 20; i++) {
+            let heart = createFallingHeart();
+            heart.y = Math.random() * canvas.height;
+            fallingHearts.push(heart);
+        }
+
+        function heartX(t) { 
+            return 16 * Math.pow(Math.sin(t), 3); 
+        } 
+
+        function heartY(t) { 
+            return 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t); 
+        } 
+
+        // Rysowanie małego serduszka w tle
+        function drawMiniHeart(x, y, size, alpha) {
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = "rgba(255, 105, 180, " + alpha + ")";
+            ctx.shadowBlur = 5;
+            ctx.shadowColor = "pink";
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.bezierCurveTo(x - size/2, y - size/2, x - size, y + size/3, x, y + size);
+            ctx.bezierCurveTo(x + size, y + size/3, x + size/2, y - size/2, x, y);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function draw() { 
+            // 1. RYSOWANIE GALAKTYKI (TŁA)
+            ctx.fillStyle = "rgba(5, 2, 15, 0.15)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height); 
+
+            // Rysowanie i migotanie gwiazd
+            ctx.save();
+            for (let star of stars) {
+                star.alpha += star.speed;
+                if (star.alpha > 1 || star.alpha < 0) star.speed = -star.speed;
+                ctx.fillStyle = `rgba(255, 255, 255, ${Math.abs(star.alpha)})`;
+                ctx.fillRect(star.x, star.y, star.size, star.size);
+            }
+            ctx.restore();
+
+            // 2. RYSOWANIE SPADAJĄCYCH SERC
+            for (let i = 0; i < fallingHearts.length; i++) {
+                let h = fallingHearts[i];
+                h.y += h.speedY;
+                h.x += h.speedX;
+
+                drawMiniHeart(h.x, h.y, h.size, h.alpha);
+
+                if (h.y > canvas.height + 20) {
+                    fallingHearts[i] = createFallingHeart();
+                }
+            }
+            
+            // 3. RYSOWANIE GŁÓWNEGO SERCA Z EFEKTEM ŚLADU KURSORA
+            const cx = canvas.width / 2; 
+            const cy = (canvas.height / 2) + Math.sin(angle * 0.8) * 10; 
+            
+            ctx.font = "bold 12px Arial"; 
+            ctx.textAlign = "center"; 
+            ctx.textBaseline = "middle"; 
+
+            for (let i = 0; i < NUM_STEPS; i++) { 
+                // Pozycja startowa głównego napisu (baza z Twojego kodu)
+                const mainT = (angle - i * 0.04) % (Math.PI * 2); 
+
+                // Generowanie śladów ("ogona myszki") dla każdego napisu z osobna
+                for (let j = 0; j < TRAIL_LENGTH; j++) {
+                    // Opóźnienie czasowe śladu – im wyższy indeks j, tym bardziej z tyłu
+                    const trailT = mainT - j * 0.008;
+
+                    let x = cx + heartX(trailT) * SCALE; 
+                    let y = cy - heartY(trailT) * SCALE; 
+
+                    // Zachowanie efektu falowania z Twojego pliku
+                    x += Math.sin(angle * 3 + i * 0.2) * 2;
+                    y += Math.cos(angle * 3 + i * 0.2) * 2;
+
+                    // Obliczanie przezroczystości śladu – ogon stopniowo znika
+                    let trailAlpha = 1 - (j / TRAIL_LENGTH);
+
+                    let color;
+                    if (i % 2 === 0) {
+                        color = `hsla(335, 100%, ${65 + (i/NUM_STEPS)*15}%, ${trailAlpha})`; 
+                    } else {
+                        color = `hsla(340, 100%, 85%, ${trailAlpha})`; 
+                    }
+
+                    ctx.save();
+                    ctx.globalAlpha = trailAlpha;
+                    ctx.fillStyle = color;
+                    
+                    // Poświata (shadowBlur) na poziomie 10
+                    ctx.shadowColor = color; 
+                    ctx.shadowBlur = 10; 
+
+                    ctx.fillText(TEXT, x, y); 
+                    ctx.restore();
+                }
+            }
+
+            angle += 0.018; 
+
+            requestAnimationFrame(draw);
+        } 
+
+        ctx.fillStyle = "#05020f";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        draw();
+
+        window.addEventListener("resize", () => { 
+            canvas.width = window.innerWidth; 
+            canvas.height = window.innerHeight; 
+            ctx.fillStyle = "#05020f";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        });
+    </script>
+</body>
+</html>
